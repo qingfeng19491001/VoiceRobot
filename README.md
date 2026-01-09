@@ -39,7 +39,7 @@ Android Studio Otter | 2025.2.1 Patch 1
 
 ## 主要依赖
 
-- [Dialog语音对话 SDK](https://www.volcengine.com/docs/6561/1597643?lang=zh#%E9%9B%86%E6%88%90%E6%8C%87%E5%8D%97)
+- Dialog语音对话 SDK
 - jet pack 组件库
 - lottie 动效库
 
