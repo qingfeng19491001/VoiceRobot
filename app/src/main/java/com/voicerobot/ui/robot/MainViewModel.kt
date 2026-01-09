@@ -1,5 +1,6 @@
 package com.voicerobot.ui.robot
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.voicerobot.lottie.AgentAnimMapper
@@ -28,6 +29,7 @@ class MainViewModel(
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
 
     private var started = false
+    private var pendingUserUtterance: String = ""
 
     fun startIfNeeded() {
         if (started) return
@@ -37,7 +39,6 @@ class MainViewModel(
         voiceEngine.init(
             VoiceConfig(
                 appId = "8115608739",
-                // 临时用服务端返回的 expected 值验证（后续请用控制台真实 AppKey 替换/迁移到配置）
                 appKey = "PlgvMymc7f3tQnJ6",
                 accessToken = "27XpxLIs6Wmk2FdAieY61k7VCRhc4MfE",
             )
@@ -50,52 +51,45 @@ class MainViewModel(
                         _uiState.update { it.copy(isEngineRunning = true) }
                         voiceEngine.sayHello("你好呀，我是AI语音交互机器人")
                     }
-
                     VoiceEvent.EngineStopped -> {
-                        _uiState.update {
-                            it.copy(
-                                isEngineRunning = false,
-                                phase = AgentAnimMapper.Phase.STANDBY,
-                            )
-                        }
+                        _uiState.update { it.copy(isEngineRunning = false, phase = AgentAnimMapper.Phase.STANDBY) }
                     }
-
                     VoiceEvent.AsrStarted -> {
+                        pendingUserUtterance = ""
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.THINKING) }
                     }
-
                     is VoiceEvent.AsrText -> {
+                        val parsed = SpeechPayloadParser.extractBestText(event.text)
+                        if (parsed.isNotEmpty()) {
+                            pendingUserUtterance = parsed
+                        }
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.THINKING) }
-                        appendOrReplaceLastUserText(SpeechPayloadParser.extractBestText(event.text))
                     }
-
                     VoiceEvent.AsrEnded -> {
-                        // 不立刻回待机，等待 Chat 回复开始/结束
+                        val finalText = pendingUserUtterance.trim()
+                        if (finalText.isNotEmpty()) {
+                            appendMessage(ChatMessage(Speaker.USER, finalText))
+                        }
+                        pendingUserUtterance = ""
                     }
-
                     is VoiceEvent.ChatText -> {
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.RESPONSE) }
-                        appendOrReplaceLastBotText(SpeechPayloadParser.extractBestText(event.text))
+                        val parsed = SpeechPayloadParser.extractBestText(event.text)
+                        appendOrUpdateBotMessage(parsed)
                     }
-
                     VoiceEvent.ChatEnded -> {
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.STANDBY) }
                     }
-
                     is VoiceEvent.Volume -> {
                         val a = event.amplitude.coerceIn(0f, 1f)
                         val boosted = if (a < 0.02f) 0.02f else (a * 1.8f).coerceIn(0f, 1f)
                         _uiState.update { it.copy(amplitude01 = boosted) }
                     }
-
-                    is VoiceEvent.Debug -> {
-                        appendOrReplaceLastBotText("[debug] ${event.message}")
-                    }
-
                     is VoiceEvent.Error -> {
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.STANDBY) }
-                        appendOrReplaceLastBotText("[error] ${event.code ?: ""} ${event.message}")
+                        appendMessage(ChatMessage(Speaker.BOT, "[error] ${event.code ?: ""} ${event.message}"))
                     }
+                    else -> Unit
                 }
             }
             .launchIn(viewModelScope)
@@ -105,26 +99,22 @@ class MainViewModel(
         }
     }
 
-    private fun appendOrReplaceLastUserText(text: String) {
-        if (text.isBlank()) return
-        _chatMessages.update { list ->
-            val last = list.lastOrNull()
-            if (last?.speaker == Speaker.USER) {
-                list.dropLast(1) + last.copy(text = text)
-            } else {
-                list + ChatMessage(Speaker.USER, text)
-            }
-        }
+    private fun appendMessage(message: ChatMessage) {
+        if (message.text.isBlank()) return
+        _chatMessages.update { it + message }
     }
 
-    private fun appendOrReplaceLastBotText(text: String) {
-        if (text.isBlank()) return
+    private fun appendOrUpdateBotMessage(textChunk: String) {
+        if (textChunk.isBlank()) return
         _chatMessages.update { list ->
             val last = list.lastOrNull()
             if (last?.speaker == Speaker.BOT) {
-                list.dropLast(1) + last.copy(text = text)
+                // Append to the last bot message for streaming effect
+                val updatedMessage = last.copy(text = last.text + textChunk)
+                list.dropLast(1) + updatedMessage
             } else {
-                list + ChatMessage(Speaker.BOT, text)
+                // Start a new bot message
+                list + ChatMessage(Speaker.BOT, textChunk)
             }
         }
     }
