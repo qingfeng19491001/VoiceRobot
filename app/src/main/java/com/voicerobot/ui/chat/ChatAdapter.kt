@@ -1,6 +1,5 @@
 package com.voicerobot.ui.chat
 
-import android.graphics.Color
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -37,20 +36,28 @@ class ChatAdapter : ListAdapter<ChatMessage, ChatAdapter.VH>(DIFF) {
         set.clear(R.id.tvMessage, ConstraintSet.START)
         set.clear(R.id.tvMessage, ConstraintSet.END)
 
+        // ensure bubble spacing to parent
+        set.setMargin(R.id.tvMessage, ConstraintSet.START, dp(holder.root, 12))
+        set.setMargin(R.id.tvMessage, ConstraintSet.END, dp(holder.root, 12))
+
         when (item.speaker) {
             Speaker.BOT -> {
                 set.connect(R.id.tvMessage, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
-                holder.tvMessage.setBackgroundColor(Color.parseColor("#4D000000"))
+                holder.tvMessage.setBackgroundResource(R.drawable.bg_bubble_bot)
                 holder.tvMessage.gravity = Gravity.START
             }
             Speaker.USER -> {
                 set.connect(R.id.tvMessage, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
-                holder.tvMessage.setBackgroundColor(Color.parseColor("#4D3D8BFF"))
+                holder.tvMessage.setBackgroundResource(R.drawable.bg_bubble_user)
                 holder.tvMessage.gravity = Gravity.START
             }
         }
 
         set.applyTo(holder.root)
+    }
+
+    private fun dp(view: View, value: Int): Int {
+        return (value * view.resources.displayMetrics.density).toInt()
     }
 
     companion object {

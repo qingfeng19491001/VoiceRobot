@@ -17,11 +17,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.airbnb.lottie.LottieAnimationView
+import com.voicerobot.audio.AudioAmplitudeReader
 import com.voicerobot.lottie.AgentAnimMapper
 import com.voicerobot.lottie.widget.WaveformView
 import com.voicerobot.ui.chat.ChatAdapter
 import com.voicerobot.ui.robot.MainViewModel
 import com.voicerobot.ui.robot.MainViewModelFactory
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -31,12 +34,15 @@ class MainActivity : AppCompatActivity() {
     private val chatAdapter = ChatAdapter()
     private var isChatVisible = false
 
+    private lateinit var amplitudeReader: AudioAmplitudeReader
+
     private val requestAudioPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         Log.d("MainActivity", "RECORD_AUDIO permission result: $granted")
         if (granted) {
             vm.startIfNeeded()
+            amplitudeReader.start(lifecycleScope)
         }
     }
 
@@ -57,6 +63,8 @@ class MainActivity : AppCompatActivity() {
             MainViewModelFactory(app.container.voiceEngineRepository)
         )[MainViewModel::class.java]
 
+        amplitudeReader = AudioAmplitudeReader(this)
+
         val avatar = findViewById<LottieAnimationView>(R.id.robotAvatar)
         val rv = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvConversation)
         val toggle = findViewById<android.widget.TextView>(R.id.tvToggleTextPanel)
@@ -71,27 +79,33 @@ class MainActivity : AppCompatActivity() {
             Log.d("MainActivity", "toggle chat visible=$isChatVisible")
         }
 
+        // robot animation state
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.uiState.collect { state ->
                     val res = AgentAnimMapper.animRes(state.phase)
                     avatar.setAnimation(res)
                     avatar.playAnimation()
-                    waveform.pushAmplitude01(state.amplitude01)
                 }
             }
         }
 
+        // chat list
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.chatMessages.collect { list ->
                     chatAdapter.submitList(list)
                     if (list.isNotEmpty()) {
-                        rv.scrollToPosition(list.lastIndex)
+                        rv.post { rv.smoothScrollToPosition(list.lastIndex) }
                     }
                 }
             }
         }
+
+        // amplitude -> waveform (decoupled from SDK)
+        amplitudeReader.amplitude
+            .onEach { amp -> waveform.pushAmplitude01(amp) }
+            .launchIn(lifecycleScope)
 
         ensureAudioPermissionAndStart()
     }
@@ -106,8 +120,14 @@ class MainActivity : AppCompatActivity() {
 
         if (granted) {
             vm.startIfNeeded()
+            amplitudeReader.start(lifecycleScope)
         } else {
             requestAudioPermission.launch(Manifest.permission.RECORD_AUDIO)
         }
+    }
+
+    override fun onDestroy() {
+        amplitudeReader.stop()
+        super.onDestroy()
     }
 }
