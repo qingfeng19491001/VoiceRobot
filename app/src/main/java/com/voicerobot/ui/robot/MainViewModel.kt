@@ -37,7 +37,8 @@ class MainViewModel(
         voiceEngine.init(
             VoiceConfig(
                 appId = "8115608739",
-                appKey = "MxUPdQWgizTZAjuse8-zKlVCgjHnbz23",
+                // 临时用服务端返回的 expected 值验证（后续请用控制台真实 AppKey 替换/迁移到配置）
+                appKey = "PlgvMymc7f3tQnJ6",
                 accessToken = "27XpxLIs6Wmk2FdAieY61k7VCRhc4MfE",
             )
         )
@@ -82,7 +83,6 @@ class MainViewModel(
                     }
 
                     is VoiceEvent.Volume -> {
-                        // 让波形“有感觉”：静音/很小输入时也给一个轻微的底噪动画值
                         val a = event.amplitude.coerceIn(0f, 1f)
                         val boosted = if (a < 0.02f) 0.02f else (a * 1.8f).coerceIn(0f, 1f)
                         _uiState.update { it.copy(amplitude01 = boosted) }
