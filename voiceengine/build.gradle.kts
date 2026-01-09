@@ -36,8 +36,12 @@ android {
 dependencies {
     implementation(project(":core"))
 
+    // Coroutines (Flow)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
     // Speech Engine (Volc)
-    implementation("com.bytedance.speechengine:speechengine_tob:0.0.14")
+    implementation("com.bytedance.speechengine:speechengine_tob:0.0.14.1-bugfix")
 
     // Net: okhttp 4.9.1 is the default dependency version
     implementation("com.squareup.okhttp3:okhttp:4.9.1")

@@ -4,5 +4,7 @@ import com.voicerobot.lottie.AgentAnimMapper
 
 data class MainUiState(
     val phase: AgentAnimMapper.Phase = AgentAnimMapper.Phase.STANDBY,
+    val isEngineRunning: Boolean = false,
+    /** 0..1 */
+    val amplitude01: Float = 0f,
 )
-
