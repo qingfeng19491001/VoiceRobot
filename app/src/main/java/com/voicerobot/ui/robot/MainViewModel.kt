@@ -1,6 +1,5 @@
 package com.voicerobot.ui.robot
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.voicerobot.lottie.AgentAnimMapper
@@ -29,6 +28,8 @@ class MainViewModel(
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
 
     private var started = false
+
+    // 临时缓存：用户本轮说话的流式 ASR
     private var pendingUserUtterance: String = ""
 
     fun startIfNeeded() {
@@ -51,45 +52,57 @@ class MainViewModel(
                         _uiState.update { it.copy(isEngineRunning = true) }
                         voiceEngine.sayHello("你好呀，我是AI语音交互机器人")
                     }
+
                     VoiceEvent.EngineStopped -> {
-                        _uiState.update { it.copy(isEngineRunning = false, phase = AgentAnimMapper.Phase.STANDBY) }
+                        _uiState.update {
+                            it.copy(
+                                isEngineRunning = false,
+                                phase = AgentAnimMapper.Phase.STANDBY,
+                            )
+                        }
                     }
+
                     VoiceEvent.AsrStarted -> {
                         pendingUserUtterance = ""
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.THINKING) }
                     }
+
                     is VoiceEvent.AsrText -> {
-                        val parsed = SpeechPayloadParser.extractBestText(event.text)
-                        if (parsed.isNotEmpty()) {
-                            pendingUserUtterance = parsed
-                        }
+                        // 用户说话中：只缓存，不写入列表
+                        pendingUserUtterance = SpeechPayloadParser.extractBestText(event.text)
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.THINKING) }
                     }
+
                     VoiceEvent.AsrEnded -> {
+                        // 用户一句话结束：再把最终文本落到列表
                         val finalText = pendingUserUtterance.trim()
                         if (finalText.isNotEmpty()) {
-                            appendMessage(ChatMessage(Speaker.USER, finalText))
+                            appendUserFinal(finalText)
                         }
                         pendingUserUtterance = ""
                     }
+
                     is VoiceEvent.ChatText -> {
+                        // 机器人回复：流式输出（append 到最后一条机器人消息）
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.RESPONSE) }
-                        val parsed = SpeechPayloadParser.extractBestText(event.text)
-                        appendOrUpdateBotMessage(parsed)
+                        appendBotStreaming(SpeechPayloadParser.extractBestText(event.text))
                     }
+
                     VoiceEvent.ChatEnded -> {
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.STANDBY) }
                     }
+
                     is VoiceEvent.Volume -> {
                         val a = event.amplitude.coerceIn(0f, 1f)
                         val boosted = if (a < 0.02f) 0.02f else (a * 1.8f).coerceIn(0f, 1f)
                         _uiState.update { it.copy(amplitude01 = boosted) }
                     }
+
                     is VoiceEvent.Error -> {
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.STANDBY) }
-                        appendMessage(ChatMessage(Speaker.BOT, "[error] ${event.code ?: ""} ${event.message}"))
+                        appendBotStreaming("[error] ${event.code ?: ""} ${event.message}")
                     }
-                    else -> Unit
+                    else -> Unit // Exhaustive when
                 }
             }
             .launchIn(viewModelScope)
@@ -99,22 +112,21 @@ class MainViewModel(
         }
     }
 
-    private fun appendMessage(message: ChatMessage) {
-        if (message.text.isBlank()) return
-        _chatMessages.update { it + message }
+    private fun appendUserFinal(text: String) {
+        _chatMessages.update { list ->
+            list + ChatMessage(Speaker.USER, text)
+        }
     }
 
-    private fun appendOrUpdateBotMessage(textChunk: String) {
-        if (textChunk.isBlank()) return
+    private fun appendBotStreaming(text: String) {
+        if (text.isBlank()) return
         _chatMessages.update { list ->
             val last = list.lastOrNull()
             if (last?.speaker == Speaker.BOT) {
-                // Append to the last bot message for streaming effect
-                val updatedMessage = last.copy(text = last.text + textChunk)
-                list.dropLast(1) + updatedMessage
+                // 追加流式文本
+                list.dropLast(1) + last.copy(text = (last.text + text).trim())
             } else {
-                // Start a new bot message
-                list + ChatMessage(Speaker.BOT, textChunk)
+                list + ChatMessage(Speaker.BOT, text)
             }
         }
     }
