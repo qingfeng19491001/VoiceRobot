@@ -6,7 +6,7 @@
 ![Android](https://img.shields.io/badge/platform-Android%2024+-green)
 ![Gradle](https://img.shields.io/badge/build-Gradle%20KTS-yellow)
 
-基于 **Volc Dialog SDK** 的AI语音对话应用，提供实时语音识别、智能对话、自定义动画驱动等功能。
+基于 **Volc Dialog SDK** 的AI语音对话应用，实现实时语音识别、智能对话、自定义动画驱动。
 
 [快速开始](#-快速开始) • [技术栈](#-技术栈) • [项目展示](#-项目展示) • [贡献](#-贡献指南)
 
@@ -16,7 +16,7 @@
 
 ## 📱 项目介绍
 
-**VoiceRobot** 是一个 Kotlin 编写的模块化 Android 应用，集成字节跳动 Volc 语音对话引擎，实现实时语音交互、智能对话管理和丰富的自定义动画效果。项目采用清晰的模块化架构，支持离线/在线语音识别与合成。
+**VoiceRobot** 是一个 Kotlin 编写的模块化 Android 应用，集成字节跳动 Volc 语音对话引擎，实现实时语音交互、智能对话管理和丰富的自定义动画效果。项目采用清晰的模块化设计，支持实时语音识别与合成。
 
 ### ✨ 核心特性
 
