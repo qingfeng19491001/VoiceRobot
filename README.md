@@ -34,10 +34,15 @@
 ### 机器人三种状态 Lottie 动画
 
 机器人根据对话状态展示不同的 Lottie 动画增强交互感受：
+#### 待机
+![20a89a42a10f45ffabbcc17775f2473e]( https://github.com/user-attachments/assets/157496e9-9d91-4650-b575-e10f5d0b45c3) 
 
-| 待机状态 | 聆听思考 | 回复应答 |
-|:---:|:---:|:---:|
-| ![待机](https://github.com/user-attachments/assets/157496e9-9d91-4650-b575-e10f5d0b45c3) | ![聆听思考](https://github.com/user-attachments/assets/8316db80-ecd9-4210-aea3-788eb1a7ca10) | ![回复](https://github.com/user-attachments/assets/9e4bc7b8-213e-4917-80e0-3a533aac7024) |
+#### 聆听思考
+![e7bb5a1a44a7ad3572eef9ad6936cfac]( https://github.com/user-attachments/assets/8316db80-ecd9-4210-aea3-788eb1a7ca10) 
+
+#### 回复
+![14d329ec8f3262394cf89f7865dd5281]( https://github.com/user-attachments/assets/9e4bc7b8-213e-4917-80e0-3a533aac7024)
+
 
 **状态切换流程**：
 ```
