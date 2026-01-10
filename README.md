@@ -8,7 +8,7 @@
 
 基于 **Volc Dialog SDK** 的AI语音对话应用，提供实时语音识别、智能对话、自定义动画驱动等功能。
 
-[项目结构](#项目结构) • [技术栈](#技术栈) • [快速开始](#快速开始) • [功能特性](#功能特性) • [贡献](#贡献)
+[快速开始](#-快速开始) • [技术栈](#-技术栈) • [项目展示](#-项目展示) • [贡献](#-贡献指南)
 
 </div>
 
@@ -23,9 +23,32 @@
 - 🎙️ **实时语音识别** - 基于 Volc Dialog SDK 的实时语音转文本  
 - 🔊 **智能语音合成** - 高保真语音输出，支持多种语调  
 - 💬 **多轮对话管理** - 完整的上下文维护与消息管理  
-- 🎨 **自定义动画系统** - 动态渐变背景 + 三球波形实时驱动
+- 🎨 **自定义动画系统** - 动态渐变背景 + 三球波形实时驱动 + 机器人状态 Lottie 动画
 - ⚡ **Kotlin Coroutines** - Flow 驱动的响应式编程  
 - 🔐 **安全配置** - 支持 local.properties 动态加载敏感配置
+
+---
+
+## 📸 项目展示
+
+### 机器人三种状态 Lottie 动画
+
+机器人根据对话状态展示不同的 Lottie 动画增强交互感受：
+
+| 待机状态 | 聆听思考 | 回复应答 |
+|:---:|:---:|:---:|
+| ![待机](https://github.com/user-attachments/assets/157496e9-9d91-4650-b575-e10f5d0b45c3) | ![聆听思考](https://github.com/user-attachments/assets/8316db80-ecd9-4210-aea3-788eb1a7ca10) | ![回复](https://github.com/user-attachments/assets/9e4bc7b8-213e-4917-80e0-3a533aac7024) |
+
+**状态切换流程**：
+```
+待机 → 用户开始说话 → 聆听思考 → AI 生成回复 → 回复应答 → 语音合成完成 → 待机
+```
+
+**Lottie 动画特性**：
+- ✅ 矢量动画，分辨率无关，适配所有屏幕
+- ✅ 文件体积小，加载快速流畅
+- ✅ 支持循环播放和状态转换
+- ✅ 与 MainViewModel 联动，自动驱动状态变化
 
 ---
 
@@ -137,13 +160,13 @@ VOLC_ACCESS_TOKEN=your_access_token
 
 ### 编译步骤
 
-#### 1. 克隆项目
+#### 1️⃣ 克隆项目
 ```bash
 git clone https://github.com/qingfeng19491001/VoiceRobot.git
 cd VoiceRobot
 ```
 
-#### 2. 配置 Volc 凭证
+#### 2️⃣ 配置 Volc 凭证
 在项目根目录创建 `local.properties`：
 
 ```properties
@@ -152,7 +175,7 @@ VOLC_APP_KEY=xxx
 VOLC_ACCESS_TOKEN=xxx
 ```
 
-#### 3. 编译项目
+#### 3️⃣ 编译项目
 ```bash
 # 使用 Gradle wrapper
 ./gradlew build
@@ -160,7 +183,7 @@ VOLC_ACCESS_TOKEN=xxx
 # 或使用 Android Studio 内置编译
 ```
 
-#### 4. 运行应用
+#### 4️⃣ 运行应用
 ```bash
 # 真机调试（推荐）
 ./gradlew installDebug
@@ -183,22 +206,38 @@ VOLC_ACCESS_TOKEN=xxx
 
 ## 🎨 动画系统详解
 
-VoiceRobot 采用两层自定义动画设计，实现流畅的交互体验。
+VoiceRobot 采用三层动画设计：Lottie 动画 + 动态渐变背景 + 波形实时驱动，实现沉浸式交互体验。
 
-### GradientBackgroundView（动态渐变背景）
+### 1. 机器人状态 Lottie 动画
 
-**职责**: 提供全屏流动渐变背景，烘托语音交互的沉浸感
+**职责**：驱动机器人的情感表达，反映对话状态
 
-**实现原理**:
-- **驱动方式**: ValueAnimator + Canvas 绘制 + LinearGradient + Matrix 平移
-- **核心技术**: 利用 Matrix 的 `setLocalMatrix()` 实现渐变色的连续平移效果
-- **颜色方案**: 粉色（#FF1493） ↔ 蓝色（#1E90FF）的流动渐变
-- **动画特性**: 
+**三种状态**：
+- **待机**：机器人四周无多余状态动画
+- **聆听思考**：机器人四周多种状态气泡，展现 AI 思考状态
+- **回复应答**：机器人左上方显示说话气泡
+
+**特性**：
+- 矢量动画，秒级加载
+- 与 MainViewModel 自动联动
+- 平滑状态转换，无视觉割裂
+
+---
+
+### 2. GradientBackgroundView（动态渐变背景）
+
+**职责**：提供全屏流动渐变背景，烘托语音交互的沉浸感
+
+**实现原理**：
+- **驱动方式**：ValueAnimator + Canvas 绘制 + LinearGradient + Matrix 平移
+- **核心技术**：利用 Matrix 的 `setLocalMatrix()` 实现渐变色的连续平移效果
+- **颜色方案**：粉色（#FF1493） ↔ 蓝色（#1E90FF）的流动渐变
+- **动画特性**：
   - 颜色平滑过渡，无闪烁感
   - 帧回调驱动，60 FPS 高帧率
   - 可配置动画强度 (`gbvIntensity`) 和滑动速度 (`gbvSpeedPxPerSec`)
 
-**使用方式**:
+**使用方式**：
 ```xml
 <!-- activity_main.xml -->
 <com.voicerobot.lottie.widget.GradientBackgroundView
@@ -209,7 +248,7 @@ VoiceRobot 采用两层自定义动画设计，实现流畅的交互体验。
     app:gbvSpeedPxPerSec="100" />
 ```
 
-**核心代码**:
+**核心代码**：
 ```kotlin
 // 初始化渐变
 val gradient = LinearGradient(
@@ -233,22 +272,24 @@ choreographer.postFrameCallback(object : Choreographer.FrameCallback {
 })
 ```
 
-### WaveformView（三球波形动画）
+---
 
-**职责**: 实时驱动三个球的跳动，可视化语音振幅，反映对话状态
+### 3. WaveformView（三球波形动画）
 
-**实现原理**:
-- **驱动方式**: Choreographer 帧回调 + Canvas 绘制 + 三角函数波形
-- **核心数学**:
-  - **正弦波生成**: 使用 `sin()` 函数生成平滑波形曲线，驱动球的上下运动
-  - **Bézier 曲线**: 计算球的弧形轨迹，增强动画的流畅感
-  - **振幅映射**: 实时振幅值（0..1）动态改变球的弹跳高度和半径
+**职责**：实时驱动三个球的跳动，可视化语音振幅，反映对话状态
 
-**视觉效果**:
-- **待机状态**: 三个小球轻微呼吸，节奏缓慢，表示空闲准备状态
-- **讲话状态**: 三个球依次上下跳动，振幅跟随语音实时变化，形成生动的波形可视化
+**实现原理**：
+- **驱动方式**：Choreographer 帧回调 + Canvas 绘制 + 三角函数波形
+- **核心数学**：
+  - **正弦波生成**：使用 `sin()` 函数生成平滑波形曲线，驱动球的上下运动
+  - **Bézier 曲线**：计算球的弧形轨迹，增强动画的流畅感
+  - **振幅映射**：实时振幅值（0..1）动态改变球的弹跳高度和半径
 
-**使用方式**:
+**视觉效果**：
+- **待机状态**：三个小球轻微呼吸，节奏缓慢，表示空闲准备状态
+- **讲话状态**：三个球依次上下跳动，振幅跟随语音实时变化，形成生动的波形可视化
+
+**使用方式**：
 ```xml
 <!-- activity_main.xml -->
 <com.voicerobot.lottie.widget.WaveformView
@@ -263,7 +304,7 @@ choreographer.postFrameCallback(object : Choreographer.FrameCallback {
 waveformView.pushAmplitude01(amplitudeValue)
 ```
 
-**球的运动公式**:
+**球的运动公式**：
 ```kotlin
 // 正弦波驱动
 val baseY = centerY
@@ -277,11 +318,11 @@ val ballRadius = minBallRadius + amplitude * (maxBallRadius - minBallRadius)
 canvas.drawCircle(ballX, ballY, ballRadius, paint)
 ```
 
-**可配置参数**:
-- `minBallRadius`: 最小球半径（待机状态）
-- `maxBallRadius`: 最大球半径（高振幅状态）
-- `waveFrequency`: 波形频率（控制跳动速度）
-- `phaseShift`: 三球间的相位差，决定跳动节奏
+**可配置参数**：
+- `minBallRadius`：最小球半径（待机状态）
+- `maxBallRadius`：最大球半径（高振幅状态）
+- `waveFrequency`：波形频率（控制跳动速度）
+- `phaseShift`：三球间的相位差，决定跳动节奏
 
 ---
 
@@ -296,9 +337,9 @@ VoiceRobotApp.onCreate()
 
 MainActivity.onCreate()
     └─> MainViewModel(voiceEngineRepository)
-        └─> 权限申请
-        └─> amplitudeReader.start()      // 音频振幅读取
-        └─> vm.startIfNeeded()           // 启动语音引擎
+        ├─> 权限申请
+        ├─> amplitudeReader.start()      // 音频振幅读取
+        ├─> vm.startIfNeeded()           // 启动语音引擎
         └─> UI 流订阅
             ├─> uiState.collect()        // 驱动 Lottie + 自定义动画
             ├─> chatMessages.collect()   // 更新聊天列表
@@ -309,14 +350,14 @@ MainActivity.onCreate()
 
 ```
 用户说话
-    └─> AudioAmplitudeReader 读取振幅 (0..1)
-    └─> WaveformView 实时可视化波形
-    └─> GradientBackgroundView 背景色响应式流动
-    └─> Volc Dialog SDK 识别文本
-    └─> MainViewModel 处理识别结果
-    └─> ChatAdapter 展示气泡（用户 & 机器人）
-    └─> Volc SDK 合成语音回复
-    └─> Lottie 动画驱动机器人表情
+    ├─> AudioAmplitudeReader 读取振幅 (0..1)
+    ├─> WaveformView 实时可视化波形
+    ├─> GradientBackgroundView 背景色响应式流动
+    ├─> Volc Dialog SDK 识别文本
+    ├─> MainViewModel 处理识别结果
+    ├─> ChatAdapter 展示气泡（用户 & 机器人）
+    ├─> Volc SDK 合成语音回复
+    └─> Lottie 动画驱动机器人表情（待机→聆听→回复→待机）
 ```
 
 ---
@@ -324,42 +365,60 @@ MainActivity.onCreate()
 ## 📂 关键类说明
 
 ### MainViewModel (`app/ui/robot/`)
-- **职责**: 驱动 UI 状态、管理语音生命周期、协调动画与语音引擎
-- **核心状态**:
-  - `uiState: StateFlow<MainUiState>` - 动画阶段、运行状态、实时振幅
-  - `chatMessages: StateFlow<List<ChatMessage>>` - 聊天消息列表
-  - `amplitude: Flow<Float>` - 实时振幅流，驱动 WaveformView
-- **核心方法**:
-  - `startIfNeeded()` - 启动语音引擎
-  - `onUserMessage(text)` - 处理用户输入文本
+**职责**：驱动 UI 状态、管理语音生命周期、协调动画与语音引擎
+
+**核心状态**：
+- `uiState: StateFlow<MainUiState>` - 动画阶段、运行状态、实时振幅
+- `chatMessages: StateFlow<List<ChatMessage>>` - 聊天消息列表
+- `amplitude: Flow<Float>` - 实时振幅流，驱动 WaveformView
+
+**核心方法**：
+- `startIfNeeded()` - 启动语音引擎
+- `onUserMessage(text)` - 处理用户输入文本
+
+---
 
 ### VoiceEngineRepository (`voiceengine/api/`)
-- **职责**: 语音引擎的抽象接口，隔离 SDK 实现细节
-- **实现**: `VolcDialogVoiceEngineRepository` 基于 Volc SDK
-- **核心方法**: 
-  - `start()` / `stop()` - 生命周期控制
-  - `sendText(text)` - 发送文本（启动对话）
-  - `amplitude: Flow<Float>` - 实时振幅流（0..1）
+**职责**：语音引擎的抽象接口，隔离 SDK 实现细节
+
+**实现**：`VolcDialogVoiceEngineRepository` 基于 Volc SDK
+
+**核心方法**：
+- `start()` / `stop()` - 生命周期控制
+- `sendText(text)` - 发送文本（启动对话）
+- `amplitude: Flow<Float>` - 实时振幅流（0..1）
+
+---
 
 ### GradientBackgroundView (`lottie/widget/`)
-- **职责**: 动态渐变背景，全屏流动色彩效果
-- **驱动方式**: ValueAnimator + Canvas + LinearGradient + Matrix
-- **可配置属性**:
-  - `gbvIntensity: Float` - 动画强度（0..1）
-  - `gbvSpeedPxPerSec: Float` - 渐变滑动速度（像素/秒）
-- **API**: 自动驱动，无需外部推送数据
+**职责**：动态渐变背景，全屏流动色彩效果
+
+**驱动方式**：ValueAnimator + Canvas + LinearGradient + Matrix
+
+**可配置属性**：
+- `gbvIntensity: Float` - 动画强度（0..1）
+- `gbvSpeedPxPerSec: Float` - 渐变滑动速度（像素/秒）
+
+**特性**：自动驱动，无需外部推送数据
+
+---
 
 ### WaveformView (`lottie/widget/`)
-- **职责**: 三球波形动画，实时驱动振幅可视化
-- **驱动方式**: Choreographer 帧回调 + 三角函数波形
-- **API**: `pushAmplitude01(value: Float)` - 推送 0..1 的振幅值
+**职责**：三球波形动画，实时驱动振幅可视化
+
+**驱动方式**：Choreographer 帧回调 + 三角函数波形
+
+**API**：`pushAmplitude01(value: Float)` - 推送 0..1 的振幅值
+
+---
 
 ### ChatAdapter (`app/ui/chat/`)
-- **职责**: RecyclerView 适配器，渲染聊天气泡
-- **特性**: 
-  - USER 气泡靠右（蓝色背景）
-  - BOT 气泡靠左（灰色背景）
-  - DiffUtil 高效增量更新
+**职责**：RecyclerView 适配器，渲染聊天气泡
+
+**特性**：
+- USER 气泡靠右（蓝色背景）
+- BOT 气泡靠左（灰色背景）
+- DiffUtil 高效增量更新
 
 ---
 
@@ -369,8 +428,8 @@ MainActivity.onCreate()
 Volc SDK
   ├─> 实时振幅值
   │   └─> MainViewModel (amplitude Flow)
-  │       ├─> WaveformView.pushAmplitude01()  // 三球波形驱动
-  │       └─> uiState.collect()               // UI 更新
+  │       ├─> WaveformView.pushAmplitude01()    // 三球波形驱动
+  │       └─> uiState.collect()                 // UI 更新
   │
   └─> 识别结果 + 合成结果
       └─> MainViewModel (chatMessages Flow)
@@ -404,6 +463,7 @@ VoiceRobot 是一款**AI语音对话应用**，提供自然流畅的语音交互
 - [x] GradientBackgroundView 动态渐变动画
 - [x] WaveformView 三球波形实时驱动
 - [x] 聊天列表 UI 与气泡样式
+- [x] 机器人状态 Lottie 动画
 - [ ] 上下文管理与多轮对话优化
 - [ ] 离线语音识别（Volc 离线模型）
 - [ ] 个性化语音包加载机制
@@ -419,20 +479,20 @@ VoiceRobot 是一款**AI语音对话应用**，提供自然流畅的语音交互
 欢迎 Issue、PR 和讨论！
 
 ### 提交 Issue
-- **Bug 报告**: 描述现象、复现步骤、预期结果、实际结果、日志
-- **功能建议**: 说明使用场景、期望效果、参考方案
+- **Bug 报告**：描述现象、复现步骤、预期结果、实际结果、日志
+- **功能建议**：说明使用场景、期望效果、参考方案
 
 ### 提交 PR
 1. Fork 本仓库
-2. 创建特性分支: `git checkout -b feature/YourFeature`
-3. 提交更改: `git commit -m 'Add YourFeature'`
-4. 推送: `git push origin feature/YourFeature`
+2. 创建特性分支：`git checkout -b feature/YourFeature`
+3. 提交更改：`git commit -m 'Add YourFeature'`
+4. 推送：`git push origin feature/YourFeature`
 5. 开启 Pull Request，描述改动内容
 
 ### 代码规范
-- **Kotlin**: 遵循 [Official Kotlin Coding Conventions](https://kotlinlang.org/docs/coding-conventions.html)
-- **Android**: 遵循 [Google Android Code Style](https://developer.android.com/kotlin/style-guide)
-- **Commit Message**: 英文，简洁清晰（e.g., `Fix: correct WaveformView amplitude calculation`）
+- **Kotlin**：遵循 [Official Kotlin Coding Conventions](https://kotlinlang.org/docs/coding-conventions.html)
+- **Android**：遵循 [Google Android Code Style](https://developer.android.com/kotlin/style-guide)
+- **Commit Message**：英文，简洁清晰（e.g., `Fix: correct WaveformView amplitude calculation`）
 
 ---
 
@@ -452,9 +512,9 @@ Permission is hereby granted, free of charge, to any person obtaining a copy...
 
 ## 📞 联系方式
 
-- 📧 **Issues**: [GitHub Issues](https://github.com/qingfeng19491001/VoiceRobot/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/qingfeng19491001/VoiceRobot/discussions)
-- 👤 **作者**: [@qingfeng19491001](https://github.com/qingfeng19491001)
+- 📧 **Issues**：[GitHub Issues](https://github.com/qingfeng19491001/VoiceRobot/issues)
+- 💬 **Discussions**：[GitHub Discussions](https://github.com/qingfeng19491001/VoiceRobot/discussions)
+- 👤 **作者**：[@qingfeng19491001](https://github.com/qingfeng19491001)
 
 ---
 
