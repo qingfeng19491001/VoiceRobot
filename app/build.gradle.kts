@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,12 +9,31 @@ android {
     namespace = "com.voicerobot"
     compileSdk = 36
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.voicerobot"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        val props = Properties().apply {
+            val f = rootProject.file("local.properties")
+            if (f.exists()) f.inputStream().use { load(it) }
+        }
+
+        fun requireProp(key: String): String {
+            val v = props.getProperty(key)
+            require(!v.isNullOrBlank()) { "Missing $key in local.properties" }
+            return v
+        }
+
+        buildConfigField("String", "VOLC_APP_ID", "\"${requireProp("VOLC_APP_ID")}\"")
+        buildConfigField("String", "VOLC_APP_KEY", "\"${requireProp("VOLC_APP_KEY")}\"")
+        buildConfigField("String", "VOLC_ACCESS_TOKEN", "\"${requireProp("VOLC_ACCESS_TOKEN")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

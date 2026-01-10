@@ -2,6 +2,7 @@ package com.voicerobot.ui.robot
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.voicerobot.BuildConfig
 import com.voicerobot.lottie.AgentAnimMapper
 import com.voicerobot.ui.chat.ChatMessage
 import com.voicerobot.ui.chat.Speaker
@@ -39,9 +40,9 @@ class MainViewModel(
         voiceEngine.prepare()
         voiceEngine.init(
             VoiceConfig(
-                appId = "8115608739",
-                appKey = "PlgvMymc7f3tQnJ6",
-                accessToken = "27XpxLIs6Wmk2FdAieY61k7VCRhc4MfE",
+                appId = BuildConfig.VOLC_APP_ID,
+                appKey = BuildConfig.VOLC_APP_KEY,
+                accessToken = BuildConfig.VOLC_ACCESS_TOKEN,
             )
         )
 
