@@ -6,7 +6,7 @@
 ![Android](https://img.shields.io/badge/platform-Android%2024+-green)
 ![Gradle](https://img.shields.io/badge/build-Gradle%20KTS-yellow)
 
-基于 **Volc Dialog SDK** 的AI语音对话应用，实现实时语音识别、智能对话、自定义动画驱动。
+基于 **Volc Dialog SDK** 的AI语音对话应用，实现实时语音识别、消息展示、自定义动画驱动。
 
 [快速开始](#-快速开始) • [技术栈](#-技术栈) • [项目展示](#-项目展示) • [贡献](#-贡献指南)
 
@@ -16,13 +16,13 @@
 
 ## 📱 项目介绍
 
-**VoiceRobot** 是一个 Kotlin 编写的模块化 Android 应用，集成字节跳动 Volc 语音对话引擎，实现实时语音交互、智能对话管理和丰富的自定义动画效果。项目采用清晰的模块化设计，支持实时语音识别与合成。
+**VoiceRobot** 是一个 Kotlin 编写的模块化 Android 应用，集成字节跳动 Volc 语音对话引擎，实现实时语音交互、消息展示和丰富的自定义动画效果。项目采用清晰的模块化设计，支持实时语音识别与合成。
 
 ### ✨ 核心特性
 
 - 🎙️ **实时语音识别** - 基于 Volc Dialog SDK 的实时语音转文本  
-- 🔊 **智能语音合成** - 高保真语音输出，支持多种语调  
-- 💬 **多轮对话管理** - 完整的上下文维护与消息管理  
+- 🔊 **智能语音合成** - 基于 Volc SDK 的语音输出  
+- 💬 **对话消息管理** - 消息列表维护与流式文本展示  
 - 🎨 **自定义动画系统** - 动态渐变背景 + 三球波形实时驱动 + 机器人状态 Lottie 动画
 - ⚡ **Kotlin Coroutines** - Flow 驱动的响应式编程  
 - 🔐 **安全配置** - 支持 local.properties 动态加载敏感配置
@@ -231,10 +231,10 @@ VoiceRobot 采用三层动画设计：Lottie 动画 + 动态渐变背景 + 波�
 **实现原理**：
 - **驱动方式**：ValueAnimator + Canvas 绘制 + LinearGradient + Matrix 平移
 - **核心技术**：利用 Matrix 的 `setLocalMatrix()` 实现渐变色的连续平移效果
-- **颜色方案**：粉色（#FF1493） ↔ 蓝色（#1E90FF）的流动渐变
+- **颜色方案**：粉色 ↔ 蓝色的流动渐变（默认颜色可通过 `setColors()` 自定义）
 - **动画特性**：
   - 颜色平滑过渡，无闪烁感
-  - 帧回调驱动，60 FPS 高帧率
+  - ValueAnimator 驱动，流畅动画
   - 可配置动画强度 (`gbvIntensity`) 和滑动速度 (`gbvSpeedPxPerSec`)
 
 **使用方式**：
@@ -250,26 +250,30 @@ VoiceRobot 采用三层动画设计：Lottie 动画 + 动态渐变背景 + 波�
 
 **核心代码**：
 ```kotlin
-// 初始化渐变
+// 初始化渐变（使用更宽的渐变宽度以实现连续平移效果）
+val gradientWidth = width * 2f
 val gradient = LinearGradient(
-    0f, 0f, width.toFloat(), 0f,
-    intArrayOf(Color.parseColor("#FF1493"), Color.parseColor("#1E90FF")),
-    floatArrayOf(0f, 1f),
+    0f, 0f, gradientWidth, height.toFloat(),
+    intArrayOf(colorPink, colorBlue, colorPink), // 三色渐变实现循环
+    floatArrayOf(0f, 0.5f, 1f),
     Shader.TileMode.CLAMP
 )
 paint.shader = gradient
 
-// 帧回调实现平移
-choreographer.postFrameCallback(object : Choreographer.FrameCallback {
-    override fun doFrame(frameTimeNanos: Long) {
-        val matrix = Matrix().apply {
-            setTranslate(offsetX, 0f)
-        }
-        gradient.setLocalMatrix(matrix)
+// ValueAnimator 驱动平移（0..1 进度值）
+val animator = ValueAnimator.ofFloat(0f, 1f).apply {
+    duration = ((width / speedPxPerSec) * 1000).toLong()
+    repeatCount = ValueAnimator.INFINITE
+    interpolator = LinearInterpolator()
+    addUpdateListener {
+        progress = it.animatedValue as Float
+        val dx = (width * progress) * intensity
+        shaderMatrix.setTranslate(dx, 0f)
+        gradient.setLocalMatrix(shaderMatrix)
         invalidate()
-        choreographer.postFrameCallback(this)
     }
-})
+    start()
+}
 ```
 
 ---
@@ -279,11 +283,14 @@ choreographer.postFrameCallback(object : Choreographer.FrameCallback {
 **职责**：实时驱动三个球的跳动，可视化语音振幅，反映对话状态
 
 **实现原理**：
-- **驱动方式**：Choreographer 帧回调 + Canvas 绘制 + 三角函数波形
+- **驱动方式**：完全基于 ValueAnimator 的双动画系统 + Canvas 绘制 + 三角函数波形
+- **双动画架构**：
+  - **时间轴动画**：无限循环的 ValueAnimator，驱动三个小球的波浪效果（`t` 值持续递增）
+  - **振幅平滑动画**：使用 `AccelerateDecelerateInterpolator` 的 ValueAnimator，从当前振幅平滑过渡到目标值
 - **核心数学**：
   - **正弦波生成**：使用 `sin()` 函数生成平滑波形曲线，驱动球的上下运动
   - **Bézier 曲线**：计算球的弧形轨迹，增强动画的流畅感
-  - **振幅映射**：实时振幅值（0..1）动态改变球的弹跳高度和半径
+  - **振幅映射**：实时振幅值（0..1）通过 ValueAnimator 平滑过渡，动态改变球的弹跳高度和半径
 
 **视觉效果**：
 - **待机状态**：三个小球轻微呼吸，节奏缓慢，表示空闲准备状态
@@ -306,23 +313,44 @@ waveformView.pushAmplitude01(amplitudeValue)
 
 **球的运动公式**：
 ```kotlin
-// 正弦波驱动
-val baseY = centerY
-val waveAmplitude = amplitude * maxBallRadius // 基础半径随振幅变化
-val phase = (i * 2 * Math.PI / 3).toFloat() // 三球相位差 120°
+// 时间轴动画驱动 t 值（无限循环）
+timeAxisAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+    duration = 16L // 约 60fps
+    repeatCount = ValueAnimator.INFINITE
+    interpolator = LinearInterpolator()
+    addUpdateListener { t += 0.06f; invalidate() }
+    start()
+}
 
-val ballY = baseY - sin(elapsedTime + phase) * waveAmplitude
-val ballRadius = minBallRadius + amplitude * (maxBallRadius - minBallRadius)
+// 振幅平滑动画（从当前值过渡到目标值）
+amplitudeAnimator = ValueAnimator.ofFloat(smoothAmp, targetAmp).apply {
+    duration = 150L
+    interpolator = AccelerateDecelerateInterpolator()
+    addUpdateListener { 
+        smoothAmp = it.animatedValue as Float
+        invalidate() 
+    }
+    start()
+}
+
+// 正弦波驱动（基于平滑后的振幅）
+val idle = 0.16f + 0.06f * sin(t) // 待机呼吸
+val speak = smoothAmp * 1.25f // 讲话振幅
+val p1 = idle + speak * wave01(t + 0.0f) // 三球相位差
+val p2 = idle + speak * wave01(t + 0.9f)
+val p3 = idle + speak * wave01(t + 1.8f)
 
 // 绘制球
-canvas.drawCircle(ballX, ballY, ballRadius, paint)
+canvas.drawCircle(x1, y1, r1, paint)
+canvas.drawCircle(x2, y2, r2, paint)
+canvas.drawCircle(x3, y3, r3, paint)
 ```
 
-**可配置参数**：
-- `minBallRadius`：最小球半径（待机状态）
-- `maxBallRadius`：最大球半径（高振幅状态）
-- `waveFrequency`：波形频率（控制跳动速度）
-- `phaseShift`：三球间的相位差，决定跳动节奏
+**技术优势**：
+- ✅ **完全基于 ValueAnimator**：统一动画驱动机制，代码更简洁
+- ✅ **双动画系统**：时间轴动画 + 振幅平滑动画，各司其职
+- ✅ **性能优化**：生命周期自动管理（`onAttachedToWindow`/`onDetachedFromWindow`），避免后台耗电
+- ✅ **平滑过渡**：使用 `AccelerateDecelerateInterpolator`，快速响应但足够自然
 
 ---
 
@@ -343,15 +371,16 @@ MainActivity.onCreate()
         └─> UI 流订阅
             ├─> uiState.collect()        // 驱动 Lottie + 自定义动画
             ├─> chatMessages.collect()   // 更新聊天列表
-            └─> amplitude.onEach()       // 驱动 WaveformView
+            └─> amplitudeReader.amplitude.onEach()  // 驱动 WaveformView
 ```
 
 ### 语音交互流程
 
 ```
 用户说话
-    ├─> AudioAmplitudeReader 读取振幅 (0..1)
-    ├─> WaveformView 实时可视化波形
+    ├─> AudioAmplitudeReader 读取振幅 (0..1) → amplitudeReader.amplitude Flow
+    ├─> MainActivity 订阅 amplitudeReader.amplitude → WaveformView.pushAmplitude01()
+    ├─> WaveformView 实时可视化波形（ValueAnimator 平滑过渡）
     ├─> GradientBackgroundView 背景色响应式流动
     ├─> Volc Dialog SDK 识别文本
     ├─> MainViewModel 处理识别结果
@@ -368,13 +397,13 @@ MainActivity.onCreate()
 **职责**：驱动 UI 状态、管理语音生命周期、协调动画与语音引擎
 
 **核心状态**：
-- `uiState: StateFlow<MainUiState>` - 动画阶段、运行状态、实时振幅
+- `uiState: StateFlow<MainUiState>` - 动画阶段、运行状态、实时振幅（`amplitude01`）
 - `chatMessages: StateFlow<List<ChatMessage>>` - 聊天消息列表
-- `amplitude: Flow<Float>` - 实时振幅流，驱动 WaveformView
+
+**注意**：实时振幅流来自 `AudioAmplitudeReader.amplitude: SharedFlow<Float>`，在 MainActivity 中直接驱动 WaveformView
 
 **核心方法**：
-- `startIfNeeded()` - 启动语音引擎
-- `onUserMessage(text)` - 处理用户输入文本
+- `startIfNeeded()` - 启动语音引擎，初始化并订阅 VoiceEvent 流
 
 ---
 
@@ -384,9 +413,15 @@ MainActivity.onCreate()
 **实现**：`VolcDialogVoiceEngineRepository` 基于 Volc SDK
 
 **核心方法**：
-- `start()` / `stop()` - 生命周期控制
-- `sendText(text)` - 发送文本（启动对话）
-- `amplitude: Flow<Float>` - 实时振幅流（0..1）
+- `prepare()` - 准备环境（必须首先调用）
+- `init(config: VoiceConfig)` - 初始化引擎
+- `startEngine(startJson: String)` - 启动对话引擎
+- `stopEngine()` - 停止引擎
+- `release()` - 释放资源
+- `sayHello(content: String)` - 发送问候语
+- `chatTextQuery(content: String)` - 发送文本查询
+
+**注意**：实时振幅流来自 `AudioAmplitudeReader`，不在本接口中
 
 ---
 
@@ -406,9 +441,13 @@ MainActivity.onCreate()
 ### WaveformView (`lottie/widget/`)
 **职责**：三球波形动画，实时驱动振幅可视化
 
-**驱动方式**：Choreographer 帧回调 + 三角函数波形
+**驱动方式**：完全基于 ValueAnimator 的双动画系统
+- **时间轴动画**：无限循环更新 `t` 值，驱动三个小球的波浪效果
+- **振幅平滑动画**：使用 `AccelerateDecelerateInterpolator` 平滑过渡，快速响应但足够自然
 
-**API**：`pushAmplitude01(value: Float)` - 推送 0..1 的振幅值
+**API**：`pushAmplitude01(value: Float)` - 推送 0..1 的振幅值，内部使用 ValueAnimator 平滑过渡
+
+**性能优化**：生命周期自动管理（`onAttachedToWindow`/`onDetachedFromWindow`），避免后台耗电
 
 ---
 
@@ -425,32 +464,40 @@ MainActivity.onCreate()
 ## 📊 核心数据流
 
 ```
+AudioAmplitudeReader
+  └─> 系统录音读取振幅 (0..1)
+      └─> amplitudeReader.amplitude (SharedFlow<Float>)
+          └─> MainActivity 订阅 → WaveformView.pushAmplitude01()
+
 Volc SDK
-  ├─> 实时振幅值
-  │   └─> MainViewModel (amplitude Flow)
-  │       ├─> WaveformView.pushAmplitude01()    // 三球波形驱动
-  │       └─> uiState.collect()                 // UI 更新
+  ├─> VoiceEvent.Volume (可选，当前未使用)
+  │   └─> MainViewModel.uiState.amplitude01
   │
   └─> 识别结果 + 合成结果
       └─> MainViewModel (chatMessages Flow)
           └─> ChatAdapter (RecyclerView 更新)
 
 GradientBackgroundView
-  └─> 自驱动（ValueAnimator）
+  └─> 自驱动（ValueAnimator + Matrix 平移）
       └─> Canvas 绘制 + 背景平移
+
+WaveformView
+  ├─> 时间轴动画（ValueAnimator 无限循环）
+  │   └─> 驱动 t 值，生成三个小球的波浪效果
+  └─> 振幅平滑动画（ValueAnimator + AccelerateDecelerateInterpolator）
+      └─> 从当前振幅平滑过渡到目标值
 ```
 
 ---
 
 ## 🎯 使用场景
 
-VoiceRobot 是一款**AI语音对话应用**，提供自然流畅的语音交互体验。
+VoiceRobot 是一款**AI语音对话应用 Demo**，展示基于 Volc SDK 的实时语音交互能力。
 
-主要应用场景包括：
-- 💬 **日常聊天** - 与AI进行多轮对话，获取信息和建议
-- 📝 **语音笔记** - 边说边记，AI自动整理内容
-- 🎓 **知识问答** - 快速语音提问，即时语音反馈
-- 🗣️ **语言学习** - 语音对话练习，纠正发音
+**可应用于**以下场景（需根据具体需求扩展功能）：
+- 💬 **语音对话** - 基于 Volc SDK 的实时语音交互
+- 🎨 **动画展示** - 自定义 View 动画与 Lottie 集成示例
+- 📱 **模块化架构** - Android 模块化项目结构参考
 
 ---
 
@@ -461,10 +508,10 @@ VoiceRobot 是一款**AI语音对话应用**，提供自然流畅的语音交互
 - [x] 语音识别/合成流程
 - [x] MainViewModel 与 UI 绑定
 - [x] GradientBackgroundView 动态渐变动画
-- [x] WaveformView 三球波形实时驱动
+- [x] WaveformView 三球波形实时驱动（完全基于 ValueAnimator）
 - [x] 聊天列表 UI 与气泡样式
 - [x] 机器人状态 Lottie 动画
-- [ ] 上下文管理与多轮对话优化
+- [ ] 上下文管理与多轮对话优化（当前依赖 Volc SDK 内置上下文）
 - [ ] 离线语音识别（Volc 离线模型）
 - [ ] 个性化语音包加载机制
 - [ ] 单元测试与集成测试

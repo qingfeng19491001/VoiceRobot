@@ -1,11 +1,13 @@
 package com.voicerobot.lottie.widget
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.util.AttributeSet
-import android.view.Choreographer
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.LinearInterpolator
 import androidx.annotation.ColorInt
 import kotlin.math.sin
 
@@ -13,6 +15,10 @@ import kotlin.math.sin
  * 三个小球声纹：
  * - 待机：三个小球轻微呼吸/起伏
  * - 讲话：根据输入振幅（0..1），三个小球从前往后依次沿曲线跳动
+ * 
+ * 优化：完全基于 ValueAnimator，统一动画驱动机制
+ * - 时间轴动画（t）：无限循环，驱动三个小球的波浪效果
+ * - 振幅平滑：从当前值平滑过渡到目标值，使用 AccelerateDecelerateInterpolator
  */
 class WaveformView @JvmOverloads constructor(
     context: Context,
@@ -27,38 +33,81 @@ class WaveformView @JvmOverloads constructor(
     @ColorInt
     private var ballColor: Int = 0xFFFFFFFF.toInt()
 
-    private var frameCallback: Choreographer.FrameCallback? = null
-
-    private var amp01: Float = 0f
+    // 时间轴：用于三个小球的波浪动画（无限循环）
     private var t: Float = 0f
+    private var timeAxisAnimator: ValueAnimator? = null
+
+    // 振幅平滑：用 ValueAnimator 从当前值动画到目标值
     private var smoothAmp: Float = 0f
+    private var targetAmp: Float = 0f
+    private var amplitudeAnimator: ValueAnimator? = null
+
+    // ValueAnimator 配置
+    private val amplitudeAnimDuration = 150L // 150ms 过渡，快速响应但足够平滑
+    private val amplitudeInterpolator = AccelerateDecelerateInterpolator()
+    
+    // 时间轴动画：无限循环更新 t（用于三个小球的波浪效果）
+    private val timeAxisStep = 0.06f // 每次更新 t 的增量
 
     fun setBallColor(@ColorInt color: Int) {
         ballColor = color
         invalidate()
     }
 
-    /** 输入 0..1 */
+    /** 输入 0..1，使用 ValueAnimator 平滑过渡到目标值 */
     fun pushAmplitude01(value: Float) {
-        amp01 = value.coerceIn(0f, 1f)
+        val clamped = value.coerceIn(0f, 1f)
+        if (clamped == targetAmp) return // 避免重复动画
+
+        targetAmp = clamped
+
+        // 如果 animator 正在运行，先取消
+        amplitudeAnimator?.cancel()
+
+        // 创建新的 animator：从当前 smoothAmp 动画到 targetAmp
+        amplitudeAnimator = ValueAnimator.ofFloat(smoothAmp, targetAmp).apply {
+            duration = amplitudeAnimDuration
+            interpolator = amplitudeInterpolator
+            addUpdateListener { anim ->
+                smoothAmp = anim.animatedValue as Float
+                invalidate() // 振幅变化时触发重绘
+            }
+            start()
+        }
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        if (frameCallback == null) {
-            frameCallback = Choreographer.FrameCallback {
-                t += 0.06f
-                smoothAmp = smoothAmp * 0.85f + amp01 * 0.15f
-                invalidate()
-                frameCallback?.let { cb -> Choreographer.getInstance().postFrameCallback(cb) }
-            }
-        }
-        frameCallback?.let { Choreographer.getInstance().postFrameCallback(it) }
+        startTimeAxisAnimation()
     }
 
     override fun onDetachedFromWindow() {
-        frameCallback?.let { Choreographer.getInstance().removeFrameCallback(it) }
+        stopTimeAxisAnimation()
+        amplitudeAnimator?.cancel()
+        amplitudeAnimator = null
         super.onDetachedFromWindow()
+    }
+
+    private fun startTimeAxisAnimation() {
+        if (timeAxisAnimator != null) return
+
+        // 时间轴动画：无限循环更新 t（用于三个小球的波浪效果）
+        // 使用简单的 0..1 循环，每次更新时 t += step
+        timeAxisAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 16L // 约 60fps，每帧更新
+            interpolator = LinearInterpolator() // 线性插值，保证 t 匀速增长
+            repeatCount = ValueAnimator.INFINITE
+            addUpdateListener {
+                t += timeAxisStep
+                invalidate() // 每帧都触发重绘
+            }
+            start()
+        }
+    }
+
+    private fun stopTimeAxisAnimation() {
+        timeAxisAnimator?.cancel()
+        timeAxisAnimator = null
     }
 
     override fun onDraw(canvas: Canvas) {
