@@ -3,19 +3,13 @@ package com.voicerobot.ui.robot
 import org.json.JSONArray
 import org.json.JSONObject
 
-/**
- * 将 SDK 回调 payload（通常是 JSON）提取为可读的自然语言文本。
- *
- * 规则：
- * - 如果是 JSON：尽量递归查找常见文本字段
- * - 如果找到的字段仍然是 JSON 字符串，则继续向内解析
- */
+
 object SpeechPayloadParser {
 
     private val textKeys = listOf(
-        // top-level common
+        
         "text", "content", "result", "sentence", "message", "transcript",
-        // volc common guesses
+        
         "asr_text", "chat_text", "reply", "answer"
     )
 
@@ -24,12 +18,12 @@ object SpeechPayloadParser {
         if (s.isEmpty()) return ""
         if (!s.startsWith("{") && !s.startsWith("[")) return s
 
-        // object
+        
         parseObjectSafely(s)?.let { obj ->
             return extractFromObject(obj).orEmpty().ifBlank { s }
         }
 
-        // array
+        
         parseArraySafely(s)?.let { arr ->
             for (i in 0 until arr.length()) {
                 val item = arr.opt(i)
@@ -47,11 +41,11 @@ object SpeechPayloadParser {
     }
 
     private fun extractFromObject(json: JSONObject): String? {
-        // direct keys
+        
         for (k in textKeys) {
             val v = json.optString(k, "").trim()
             if (v.isNotEmpty() && v != "null") {
-                // if nested json string, keep digging
+                
                 if (v.startsWith("{") || v.startsWith("[")) {
                     val nested = extractBestText(v)
                     if (nested.isNotBlank() && nested != v) return nested
@@ -60,7 +54,7 @@ object SpeechPayloadParser {
             }
         }
 
-        // openai-like streaming
+        
         json.optJSONArray("choices")?.let { choices ->
             val first = choices.optJSONObject(0)
             if (first != null) {
@@ -69,7 +63,7 @@ object SpeechPayloadParser {
             }
         }
 
-        // alternatives[0].text
+        
         json.optJSONArray("alternatives")?.let { alts ->
             val first = alts.optJSONObject(0)
             if (first != null) {
@@ -78,7 +72,7 @@ object SpeechPayloadParser {
             }
         }
 
-        // recursive search nested objects
+        
         val names = json.keys()
         while (names.hasNext()) {
             val key = names.next()

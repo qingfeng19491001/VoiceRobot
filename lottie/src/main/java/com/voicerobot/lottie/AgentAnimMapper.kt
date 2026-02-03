@@ -3,11 +3,7 @@ package com.voicerobot.lottie
 import androidx.annotation.RawRes
 import com.voicerobot.lottie.R
 
-/**
- * Map robot phase -> lottie raw resource.
- *
- * Keep this in :lottie so app does not hardcode raw ids.
- */
+
 object AgentAnimMapper {
 
     enum class Phase {

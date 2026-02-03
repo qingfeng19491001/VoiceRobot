@@ -34,6 +34,10 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+
+    // HTTP for StartVoiceChat
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

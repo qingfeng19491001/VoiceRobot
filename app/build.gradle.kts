@@ -11,6 +11,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        viewBinding = true
     }
 
     defaultConfig {
@@ -34,6 +35,36 @@ android {
         buildConfigField("String", "VOLC_APP_ID", "\"${requireProp("VOLC_APP_ID")}\"")
         buildConfigField("String", "VOLC_APP_KEY", "\"${requireProp("VOLC_APP_KEY")}\"")
         buildConfigField("String", "VOLC_ACCESS_TOKEN", "\"${requireProp("VOLC_ACCESS_TOKEN")}\"")
+
+        buildConfigField("String", "VOLC_ACCESS_KEY_ID", "\"${requireProp("VOLC_ACCESS_KEY_ID")}\"")
+        buildConfigField("String", "VOLC_SECRET_ACCESS_KEY", "\"${requireProp("VOLC_SECRET_ACCESS_KEY")}\"")
+        val sessionToken = props.getProperty("VOLC_SESSION_TOKEN") ?: ""
+        buildConfigField("String", "VOLC_SESSION_TOKEN", "\"$sessionToken\"")
+
+        // RTC demo params
+        buildConfigField("String", "RTC_APP_ID", "\"${requireProp("rtc.appId")}\"")
+        buildConfigField("String", "RTC_ROOM_ID", "\"${requireProp("rtc.roomId")}\"")
+        buildConfigField("String", "RTC_USER_ID", "\"${requireProp("rtc.userId")}\"")
+        buildConfigField("String", "RTC_TOKEN", "\"${requireProp("rtc.token")}\"")
+
+        // Realtime AI demo params
+        buildConfigField("String", "AI_TASK_ID", "\"${requireProp("ai.taskId")}\"")
+        buildConfigField("String", "AI_AGENT_USER_ID", "\"${requireProp("ai.agent.userId")}\"")
+        buildConfigField("String", "AI_WELCOME_MESSAGE", "\"${requireProp("ai.agent.welcomeMessage")}\"")
+        buildConfigField("String", "AI_SYSTEM_MESSAGES", "\"${requireProp("ai.agent.systemMessages")}\"")
+
+        buildConfigField("String", "AI_LLM_ENDPOINT_ID", "\"${requireProp("ai.llm.endPointId")}\"")
+        buildConfigField("String", "AI_LLM_THINKING_TYPE", "\"${requireProp("ai.llm.thinkingType")}\"")
+        buildConfigField("boolean", "AI_LLM_VISION_ENABLE", requireProp("ai.llm.visionEnable"))
+
+        buildConfigField("String", "AI_ASR_API_RESOURCE_ID", "\"${requireProp("ai.asr.apiResourceId")}\"")
+        buildConfigField("String", "AI_ASR_APP_ID", "\"${requireProp("ai.asr.appId")}\"")
+        buildConfigField("String", "AI_ASR_ACCESS_TOKEN", "\"${requireProp("ai.asr.accessToken")}\"")
+
+        buildConfigField("String", "AI_TTS_APP_ID", "\"${requireProp("ai.tts.appId")}\"")
+        buildConfigField("String", "AI_TTS_ACCESS_TOKEN", "\"${requireProp("ai.tts.accessToken")}\"")
+        buildConfigField("String", "AI_TTS_VOICE_TYPE", "\"${requireProp("ai.tts.voiceType")}\"")
+        buildConfigField("int", "AI_TTS_SPEECH_RATE", requireProp("ai.tts.speechRate"))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -61,6 +92,7 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":voiceengine"))
     implementation(project(":lottie"))
+    implementation(project(":rtc"))
 
     // AndroidX UI
     implementation(libs.androidx.core.ktx)
@@ -68,6 +100,13 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+
+    // Support lib compatibility for RTC SDK transitive refs
+    implementation("androidx.legacy:legacy-support-v4:1.0.0")
+
+    // Navigation
+    implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
+    implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
 
     // Lottie view used directly in app XML/code
     implementation("com.airbnb.android:lottie:6.4.0")

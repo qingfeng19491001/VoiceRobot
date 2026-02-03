@@ -11,7 +11,7 @@ sealed interface VoiceEvent {
     data class ChatText(val text: String) : VoiceEvent
     data object ChatEnded : VoiceEvent
 
-    /** 0..1 amplitude derived from recorder PCM */
+    
     data class Volume(val amplitude: Float) : VoiceEvent
 
     data class Debug(val message: String) : VoiceEvent

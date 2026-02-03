@@ -15,11 +15,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import java.io.File
 import kotlin.math.abs
 
-/**
- * Dialog SDK wrapper.
- *
- * Important: Do NOT call sendDirective from SDK callback thread.
- */
+
 class VolcDialogVoiceEngineRepository(
     private val app: Application,
 ) : VoiceEngineRepository, SpeechEngine.SpeechListener {
@@ -44,10 +40,10 @@ class VolcDialogVoiceEngineRepository(
         val e = SpeechEngineGenerator.getInstance()
         e.createEngine()
 
-        // Required
+        
         e.setOptionString(SpeechEngineDefines.PARAMS_KEY_ENGINE_NAME_STRING, SpeechEngineDefines.DIALOG_ENGINE)
 
-        // Auth
+        
         e.setOptionString(SpeechEngineDefines.PARAMS_KEY_APP_ID_STRING, config.appId)
         e.setOptionString(SpeechEngineDefines.PARAMS_KEY_APP_KEY_STRING, config.appKey)
         e.setOptionString(SpeechEngineDefines.PARAMS_KEY_APP_TOKEN_STRING, config.accessToken)
@@ -57,20 +53,20 @@ class VolcDialogVoiceEngineRepository(
         e.setOptionString(SpeechEngineDefines.PARAMS_KEY_DIALOG_ADDRESS_STRING, config.dialogAddress)
         e.setOptionString(SpeechEngineDefines.PARAMS_KEY_DIALOG_URI_STRING, config.dialogUri)
 
-        // AEC
+        
         e.setOptionBoolean(SpeechEngineDefines.PARAMS_KEY_ENABLE_AEC_BOOL, true)
         e.setOptionString(
             SpeechEngineDefines.PARAMS_KEY_AEC_MODEL_PATH_STRING,
             extractAssetToFile(app.applicationContext, config.aecModelAssetName).absolutePath
         )
 
-        // Logging
+        
         val logDir = File(app.filesDir, "speech_logs")
         logDir.mkdirs()
         e.setOptionString(SpeechEngineDefines.PARAMS_KEY_DEBUG_PATH_STRING, logDir.absolutePath)
         e.setOptionString(SpeechEngineDefines.PARAMS_KEY_LOG_LEVEL_STRING, SpeechEngineDefines.LOG_LEVEL_TRACE)
 
-        // Enable recorder audio callback for waveform
+        
         e.setOptionBoolean(SpeechEngineDefines.PARAMS_KEY_DIALOG_ENABLE_RECORDER_AUDIO_CALLBACK_BOOL, true)
 
         val ret = e.initEngine()
@@ -138,7 +134,7 @@ class VolcDialogVoiceEngineRepository(
             ""
         }
 
-        // logcat quick check
+        
         Log.d("VoiceEngine", "onSpeechMessage type=$type len=$len")
 
         when (type) {

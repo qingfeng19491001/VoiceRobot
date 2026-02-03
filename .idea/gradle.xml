@@ -13,6 +13,7 @@
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/lottie" />
+            <option value="$PROJECT_DIR$/rtc" />
             <option value="$PROJECT_DIR$/voiceengine" />
           </set>
         </option>

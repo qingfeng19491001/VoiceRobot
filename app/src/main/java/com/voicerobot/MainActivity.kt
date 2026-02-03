@@ -11,30 +11,26 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.airbnb.lottie.LottieAnimationView
+import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.fragment.NavHostFragment
 import com.voicerobot.audio.AudioAmplitudeReader
-import com.voicerobot.lottie.AgentAnimMapper
-import com.voicerobot.lottie.widget.WaveformView
-import com.voicerobot.ui.chat.ChatAdapter
+import com.voicerobot.databinding.ActivityMainBinding
 import com.voicerobot.ui.robot.MainViewModel
 import com.voicerobot.ui.robot.MainViewModelFactory
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var vm: MainViewModel
+    lateinit var vm: MainViewModel
+        private set
 
-    private val chatAdapter = ChatAdapter()
-    private var isChatVisible = false
+    private lateinit var binding: ActivityMainBinding
 
-    private lateinit var amplitudeReader: AudioAmplitudeReader
+    private lateinit var navController: NavController
 
     private val requestAudioPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -42,20 +38,16 @@ class MainActivity : AppCompatActivity() {
         Log.d("MainActivity", "RECORD_AUDIO permission result: $granted")
         if (granted) {
             vm.startIfNeeded()
-            amplitudeReader.start(lifecycleScope)
+            AudioAmplitudeReader.start()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         val app = application as VoiceRobotApp
         vm = ViewModelProvider(
@@ -63,51 +55,108 @@ class MainActivity : AppCompatActivity() {
             MainViewModelFactory(app.container.voiceEngineRepository)
         )[MainViewModel::class.java]
 
-        amplitudeReader = AudioAmplitudeReader(this)
+        AudioAmplitudeReader.init(this)
 
-        val avatar = findViewById<LottieAnimationView>(R.id.robotAvatar)
-        val rv = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvConversation)
-        val toggle = findViewById<android.widget.TextView>(R.id.tvToggleTextPanel)
-        val waveform = findViewById<WaveformView>(R.id.waveform)
+        val host = supportFragmentManager.findFragmentById(R.id.navHost) as NavHostFragment
+        navController = host.navController
 
-        rv.layoutManager = LinearLayoutManager(this)
-        rv.adapter = chatAdapter
-
-        toggle.setOnClickListener {
-            isChatVisible = !isChatVisible
-            rv.visibility = if (isChatVisible) View.VISIBLE else View.GONE
-            Log.d("MainActivity", "toggle chat visible=$isChatVisible")
+        ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val destId = navController.currentDestination?.id
+            if (destId == R.id.videoFragment) {
+                v.setPadding(0, 0, 0, 0)
+            } else {
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            }
+            insets
         }
 
-        // robot animation state
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.uiState.collect { state ->
-                    val res = AgentAnimMapper.animRes(state.phase)
-                    avatar.setAnimation(res)
-                    avatar.playAnimation()
-                }
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            val isVideo = destination.id == R.id.videoFragment
+
+            binding.gradientBg.visibility = if (isVideo) View.GONE else View.VISIBLE
+            binding.topBar.visibility = if (isVideo) View.GONE else View.VISIBLE
+
+            if (isVideo) {
+                AudioAmplitudeReader.stop()
+                vm.stop()
+            } else {
+                applyMicState()
             }
         }
 
-        // chat list
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.chatMessages.collect { list ->
-                    chatAdapter.submitList(list)
-                    if (list.isNotEmpty()) {
-                        rv.post { rv.smoothScrollToPosition(list.lastIndex) }
-                    }
-                }
-            }
-        }
-
-        // amplitude -> waveform (decoupled from SDK)
-        amplitudeReader.amplitude
-            .onEach { amp -> waveform.pushAmplitude01(amp) }
+        AudioAmplitudeReader.amplitude
+            .onEach { amp -> binding.waveform.pushAmplitude01(amp) }
             .launchIn(lifecycleScope)
 
+        bindBottomActions()
+        applyMicState()
         ensureAudioPermissionAndStart()
+    }
+
+    private var micEnabled = false
+
+    private fun bindBottomActions() {
+        binding.btnPrj.setOnClickListener {
+            navigateTopLevel(R.id.prjFragment)
+        }
+
+        binding.btnVideo.setOnClickListener {
+            navigateTopLevel(R.id.videoFragment)
+        }
+
+        binding.btnEnd.setOnClickListener {
+            if (navController.currentDestination?.id == R.id.videoFragment) {
+                navController.popBackStack()
+            } else {
+                navigateTopLevel(R.id.homeFragment)
+            }
+        }
+
+        binding.btnMic.setOnClickListener {
+            micEnabled = !micEnabled
+            applyMicState()
+        }
+    }
+
+    private fun applyMicState() {
+        if (navController.currentDestination?.id == R.id.videoFragment) {
+            // Video page owns mic/camera; keep main engine stopped.
+            return
+        }
+
+        if (micEnabled) {
+            val granted = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (granted) {
+                vm.startIfNeeded()
+                AudioAmplitudeReader.start()
+                binding.btnMic.setImageResource(R.drawable.ic_mic_normal)
+            } else {
+                requestAudioPermission.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        } else {
+            AudioAmplitudeReader.stop()
+            vm.stop()
+            binding.waveform.pushAmplitude01(0f)
+            binding.btnMic.setImageResource(R.drawable.ic_mic_mute)
+        }
+    }
+
+    private fun navigateTopLevel(destId: Int) {
+        val currentId = navController.currentDestination?.id
+        if (currentId == destId) return
+
+        navController.navigate(destId, null, androidx.navigation.navOptions {
+            launchSingleTop = true
+            restoreState = true
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+        })
     }
 
     private fun ensureAudioPermissionAndStart() {
@@ -120,14 +169,14 @@ class MainActivity : AppCompatActivity() {
 
         if (granted) {
             vm.startIfNeeded()
-            amplitudeReader.start(lifecycleScope)
+            AudioAmplitudeReader.start()
         } else {
             requestAudioPermission.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
 
     override fun onDestroy() {
-        amplitudeReader.stop()
+        AudioAmplitudeReader.stop()
         super.onDestroy()
     }
 }

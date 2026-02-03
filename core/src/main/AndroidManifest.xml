@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Library module manifest: do NOT define application icon/label/theme here.
-         Those are owned by the app module to avoid manifest-merger conflicts. -->
+    
     <application />
 
 </manifest>

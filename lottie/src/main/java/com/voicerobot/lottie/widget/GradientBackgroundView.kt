@@ -14,12 +14,7 @@ import androidx.annotation.ColorInt
 import androidx.core.content.withStyledAttributes
 import com.voicerobot.lottie.R
 
-/**
- * Dynamic flowing gradient background.
- *
- * - Implementation: ValueAnimator + LinearGradient + localMatrix translation.
- * - Default colors: pink <-> blue flowing.
- */
+
 class GradientBackgroundView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -39,17 +34,17 @@ class GradientBackgroundView @JvmOverloads constructor(
 
     private var animator: ValueAnimator? = null
 
-    /** 0..1 */
+    
     private var progress: Float = 0f
 
-    /** 0..1 */
+    
     private var intensity: Float = 1f
 
-    /** px per second */
+    
     private var speedPxPerSec: Float = 180f
 
     init {
-        // Optional: if you later want attrs, keep this hook.
+        
         context.withStyledAttributes(attrs, R.styleable.GradientBackgroundView) {
             intensity = getFloat(R.styleable.GradientBackgroundView_gbvIntensity, 1f)
             speedPxPerSec = getFloat(R.styleable.GradientBackgroundView_gbvSpeedPxPerSec, 180f)
@@ -70,7 +65,7 @@ class GradientBackgroundView @JvmOverloads constructor(
         super.onSizeChanged(w, h, oldw, oldh)
         if (w <= 0 || h <= 0) return
 
-        // Make a wider gradient so translation feels continuous.
+        
         val gradientWidth = w * 2f
         shader = LinearGradient(
             0f, 0f,
@@ -92,7 +87,7 @@ class GradientBackgroundView @JvmOverloads constructor(
 
         val s = shader ?: return
 
-        // Translate gradient back and forth (0..w)
+        
         val dx = (w * progress) * intensity
         shaderMatrix.reset()
         shaderMatrix.setTranslate(dx, 0f)
@@ -104,18 +99,18 @@ class GradientBackgroundView @JvmOverloads constructor(
     fun setColors(@ColorInt pink: Int, @ColorInt blue: Int) {
         colorPink = pink
         colorBlue = blue
-        // Recreate shader with new colors.
+        
         requestLayout()
         invalidate()
     }
 
-    /** 0..1 */
+    
     fun setIntensity(value: Float) {
         intensity = value.coerceIn(0f, 1f)
         invalidate()
     }
 
-    /** px/s */
+    
     fun setSpeedPxPerSec(value: Float) {
         speedPxPerSec = value.coerceAtLeast(10f)
         restartAnim()
@@ -126,7 +121,7 @@ class GradientBackgroundView @JvmOverloads constructor(
         if (animator?.isStarted == true) return
 
         val w = width.coerceAtLeast(1)
-        // duration for one screen-width translation
+        
         val durationMs = ((w / speedPxPerSec) * 1000f).toLong().coerceAtLeast(1200L)
 
         animator = ValueAnimator.ofFloat(0f, 1f).apply {

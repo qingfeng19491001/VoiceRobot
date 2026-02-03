@@ -32,11 +32,11 @@ class ChatAdapter : ListAdapter<ChatMessage, ChatAdapter.VH>(DIFF) {
         val set = ConstraintSet()
         set.clone(holder.root)
 
-        // clear previous constraints
+        
         set.clear(R.id.tvMessage, ConstraintSet.START)
         set.clear(R.id.tvMessage, ConstraintSet.END)
 
-        // ensure bubble spacing to parent
+        
         set.setMargin(R.id.tvMessage, ConstraintSet.START, dp(holder.root, 12))
         set.setMargin(R.id.tvMessage, ConstraintSet.END, dp(holder.root, 12))
 

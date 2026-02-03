@@ -30,7 +30,22 @@ class MainViewModel(
 
     private var started = false
 
-    // 临时缓存：用户本轮说话的流式 ASR
+    fun stop() {
+        if (!started) return
+        started = false
+        try {
+            voiceEngine.stopEngine()
+        } catch (_: Throwable) {
+        }
+        _uiState.update {
+            it.copy(
+                isEngineRunning = false,
+                phase = AgentAnimMapper.Phase.STANDBY,
+            )
+        }
+    }
+
+    
     private var pendingUserUtterance: String = ""
 
     fun startIfNeeded() {
@@ -69,13 +84,13 @@ class MainViewModel(
                     }
 
                     is VoiceEvent.AsrText -> {
-                        // 用户说话中：只缓存，不写入列表
+                        
                         pendingUserUtterance = SpeechPayloadParser.extractBestText(event.text)
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.THINKING) }
                     }
 
                     VoiceEvent.AsrEnded -> {
-                        // 用户一句话结束：再把最终文本落到列表
+                        
                         val finalText = pendingUserUtterance.trim()
                         if (finalText.isNotEmpty()) {
                             appendUserFinal(finalText)
@@ -84,7 +99,7 @@ class MainViewModel(
                     }
 
                     is VoiceEvent.ChatText -> {
-                        // 机器人回复：流式输出（append 到最后一条机器人消息）
+                        
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.RESPONSE) }
                         appendBotStreaming(SpeechPayloadParser.extractBestText(event.text))
                     }
@@ -103,7 +118,7 @@ class MainViewModel(
                         _uiState.update { it.copy(phase = AgentAnimMapper.Phase.STANDBY) }
                         appendBotStreaming("[error] ${event.code ?: ""} ${event.message}")
                     }
-                    else -> Unit // Exhaustive when
+                    else -> Unit 
                 }
             }
             .launchIn(viewModelScope)
@@ -124,7 +139,7 @@ class MainViewModel(
         _chatMessages.update { list ->
             val last = list.lastOrNull()
             if (last?.speaker == Speaker.BOT) {
-                // 追加流式文本
+                
                 list.dropLast(1) + last.copy(text = (last.text + text).trim())
             } else {
                 list + ChatMessage(Speaker.BOT, text)
